@@ -25,12 +25,37 @@ Run the game:
 python jumping_jack.py
 ```
 
+### First Time Setup
+
+When you first run the game, you'll be prompted to enter your name. This name will be used for the leaderboard.
+
+- Type your name and press **ENTER** to start
+- Press **ESC** to use the last player's name
+- Press **BACKSPACE** to delete characters
+- If you leave it blank and press ENTER, your name will be "Anonymous"
+
+Your name will be remembered and shown by default the next time you play.
+
+### Debug Mode
+
+Run the game with debug mode to display gap numbers on platforms:
+
+```bash
+python jumping_jack.py --debug
+```
+
+In debug mode, each gap will show its origin platform number (0-4) in blue text in the middle of the gap. This is useful for understanding and debugging the gap movement system.
+
 ## Controls
 
+### In-Game Controls
 - **LEFT ARROW** or **A** - Move left
 - **RIGHT ARROW** or **D** - Move right
 - **UP ARROW** or **SPACEBAR** - Jump (or continue to next level)
-- **R** - Restart (when game over)
+
+### Game Over Controls
+- **R** - Restart the game (enter name again)
+- **L** - Toggle leaderboard display
 
 ## Gameplay Rules
 
@@ -48,9 +73,10 @@ python jumping_jack.py
   - Example: left-to-right on platform 0 → right-to-left on platform 1 → left-to-right on platform 2
   - Initial direction and starting platform are random
 - Gaps bounce between top and bottom platforms
-- You can only jump through gaps - hitting a solid platform from below stops your jump
+- **CRITICAL: You can ONLY jump through gaps** - hitting a solid platform from below immediately stops your jump
+- Jumping through solid platform lines is NOT possible - the player will be blocked
+- **Jump height is limited to exactly one platform level (80 pixels)** - you cannot jump through multiple platforms in a single jump, even if gaps are aligned
 - You can land on solid parts of platforms
-- Being crushed between two platforms costs a life
 
 ### Enemies
 - **9 different enemy types** that unlock as you progress through levels
@@ -84,7 +110,7 @@ Each enemy type has 6 color variants. The first color listed is the default (app
 4. **Octopus** (deep pink/green/red/orange/deep sky blue/purple) - Alien with waving tentacles
 5. **Ghost** (cyan/orange/hot pink/light blue/green/purple) - Floating specter with wavy bottom edge
 6. **Car** (yellow/deep sky blue/orange/spring green/deep pink/red) - Automobile with windows and wheels
-7. **Train** (blue violet/green/orange/deep sky blue/gold/red) - Locomotive with smokestack and multiple wheels
+7. **Train** (blue violet/green/orange/deep sky blue/gold/red) - Locomotive with cabin and smokestack at the back, pulling forward
 8. **Hunter** (orange/green/blue violet/deep sky blue/deep pink/red) - Stick figure carrying a gun
 9. **Dinosaur** (deep sky blue/purple/orange/indian red/gold/green) - T-Rex with animated walking legs
 
@@ -93,30 +119,38 @@ Each enemy type has 6 color variants. The first color listed is the default (app
 - **Jump**: Rising pitch sweep (200-600 Hz) when you jump
 - **Footsteps**: Low tone when walking on ground (with cooldown to avoid spam)
 - **Landing**: Quick downward sweep when landing from a jump
-- **Death**: Harsh downward sweep when hit by enemy or crushed
+- **Death**: Harsh downward sweep when hit by enemy
 - **Level Complete**: Upward celebration sweep when reaching the top
 - All sounds are generated using NumPy and Pygame's audio mixer
 
 ### Invincibility System
 - **2 seconds of invincibility** at the start of each level to give you time to react
 - **1 second of invincibility** after losing a life and respawning
-- During invincibility, you cannot take damage from enemies or being crushed
+- During invincibility, you cannot take damage from enemies
 - This prevents instant death when enemies spawn near you or when respawning
 
 ### Level Progression
 - Start at the bottom of the screen
 - Reach the very top (ceiling) to complete the level
-- A level transition screen shows the next level number
+- **Level transition screen**: White background with black text showing "LEVEL #" in the center
 - Press SPACE or wait 3 seconds to start the next level
 - You start at the bottom again on each new level
 
 ### Scoring & Lives
-- Earn 10 points per second of survival
+- Earn 10 points per second of survival **while off the ground** (only when on platforms or jumping)
 - Start with 5 lives
-- Lose a life when:
-  - Crushed between two platforms
-  - Touching an enemy
+- Lives are displayed as small Jack sprites at the top of the screen
+- **Lose a life only when touching an enemy**
 - Game over when all lives are lost
+- Your score is automatically saved to the leaderboard when the game ends
+
+### Leaderboard
+- Tracks the top 10 high scores
+- Displays player name, score, level reached, and date
+- Automatically shown when game ends
+- Press **L** to toggle leaderboard view during game over
+- Stored persistently in `leaderboard.json`
+- Your current score is highlighted in red on the leaderboard
 
 ### Difficulty Progression
 - Each level increases:
@@ -142,7 +176,9 @@ Each enemy type has 6 color variants. The first color listed is the default (app
 - Progressive difficulty scaling
 - Level-based progression system
 - Score tracking across levels
-- Lives system
+- Lives system displayed as Jack sprites
+- **Persistent leaderboard** - top 10 scores saved to file
+- **Player name entry** - personalized gameplay experience
 - Retro-style graphics inspired by the ZX Spectrum original
 - **Retro-style sound effects** - synthesized jump, walk, landing, death, and victory sounds
 
@@ -168,7 +204,9 @@ The game follows an object-oriented design with separate modules for each game e
 - **constants.py** - Game constants (screen dimensions, colors, FPS)
 - **player.py** - Player class with movement and physics
 - **game_platform.py** - Platform class with dynamic gaps
-- **enemy.py** - Enemy class with patrol behavior
+- **enemy_types.py** - Enemy classes with unique behaviors and designs
+- **sound_manager.py** - Sound effects generation and playback
+- **leaderboard.py** - Score persistence and leaderboard management
 - **jumping_jack.py** - Main game loop and Game class
 
 ### Core Game Loop
@@ -194,11 +232,14 @@ while running:
   ```
 
 #### Jump Mechanics
-- **Jump strength**: -15 pixels/frame (negative = upward, tuned to jump exactly one floor)
+- **Jump strength**: -11 pixels/frame (negative = upward)
 - **Gravity**: 0.8 pixels/frame² constant acceleration
 - **Physics update**: `velocity_y += gravity` then `y += velocity_y`
 - **Jump constraint**: Can only jump when not already jumping (prevents mid-air jumps)
-- **Jump height**: Calibrated to jump through one platform level at a time, preventing multi-floor jumps
+- **Jump height**: Calibrated for exactly one platform level (60 pixels)
+  - Maximum jump height: ~76 pixels (calculated as `jump_strength² / (2 * gravity)`)
+  - Platform spacing: 60 pixels
+  - This allows jumping to the next platform but prevents double-platform jumps
 
 #### Collision Detection
 
@@ -225,12 +266,7 @@ def can_land_on_platform(self, platform, all_platforms):
 - Stops upward movement if hitting solid platform (not in active gap)
 - Allows jumping through active gaps only
 
-**Crushing detection** ([player.py:127-136](player.py#L127-L136)):
-- Checks if player is simultaneously touching 2+ platforms
-- This happens when caught between closing gaps or platforms
-- Results in life loss
-
-**Key implementation detail**: All collision detection now accounts for dynamic gap movement between platform levels, searching for the "active gap" on each platform level rather than checking each platform's own gap position.
+**Key implementation detail**: All collision detection accounts for dynamic gap movement between platform levels, searching for the "active gap" on each platform level rather than checking each platform's own gap position. Jumping is only possible through gaps - hitting a solid platform from below stops the jump.
 
 ### Platform System ([game_platform.py](game_platform.py))
 
@@ -258,8 +294,8 @@ def update(self):
 ```
 
 **Key implementation details**:
-- Platform bars stay fixed at their original Y positions: [510, 430, 350, 270, 190] - evenly spaced 80 pixels apart
-- Player stands on ground at y=560 (no platform there - just empty ground)
+- Platform bars stay fixed at their original Y positions: [340, 280, 220, 160, 100] - evenly spaced 60 pixels apart
+- Player stands on ground at y=370 (no platform there - just empty ground)
 - Gap position tracked separately via `gap_current_platform_index`
 - **Snake pattern implementation** (critical for proper behavior):
 
@@ -398,7 +434,7 @@ def update(self):
   4. **Octopus** (deep pink/green/red/orange/deep sky blue/purple) - 30x25px, alien with waving tentacles
   5. **Ghost** (cyan/orange/hot pink/light blue/green/purple) - 28x28px, floating with wavy bottom (Level 2+)
   6. **Car** (yellow/deep sky blue/orange/spring green/deep pink/red) - 45x18px, automobile with wheels (Level 3+)
-  7. **Train** (blue violet/green/orange/deep sky blue/gold/red) - 55x22px, locomotive with smokestack (Level 4+)
+  7. **Train** (blue violet/green/orange/deep sky blue/gold/red) - 55x22px, locomotive with cabin at back (Level 4+)
   8. **Hunter** (orange/green/blue violet/deep sky blue/deep pink/red) - 22x30px, stick figure with gun (Level 5+)
   9. **Dinosaur** (deep sky blue/purple/orange/indian red/gold/green) - 40x28px, T-Rex with animated legs (Level 6+)
 - Each type has unique size, color variants, visual appearance, and animations
@@ -489,26 +525,28 @@ num_enemies = min(2 + self.level, 8)
 | 3     | 2.5   | 5       |
 | 7+    | 4.5+  | 8 (max) |
 
-### Scoring System ([jumping_jack.py:108-111](jumping_jack.py#L108-L111))
+### Scoring System ([jumping_jack.py:274-279](jumping_jack.py#L274-L279))
 
-Frame-rate independent scoring using a timer:
+Frame-rate independent scoring using a timer. Score only increments when player is off the ground:
 
 ```python
-self.score_timer += 1
-if self.score_timer >= FPS:  # Every 60 frames = 1 second
-    self.total_score += 10
-    self.score_timer = 0
+# Only increment score when player is not on the ground
+if self.player.y < 370 - 32:  # Ground level is 370, player height is 32
+    self.score_timer += 1
+    if self.score_timer >= FPS:  # Every 60 frames = 1 second
+        self.total_score += 10
+        self.score_timer = 0
 ```
 
-Awards 10 points per second of survival.
+Awards 10 points per second while on platforms or jumping (not while standing on ground).
 
 ### Lives and Respawning
 
-Player starts with 5 lives. Life is lost when:
-- Crushed between two platforms
-- Touching an enemy
+Player starts with 5 lives. Life is lost only when touching an enemy.
 
-On life loss, player respawns at (100, 520) with reset velocity, standing on the ground at y=560 (no platform there).
+Lives are displayed visually as small Jack sprites at the top of the screen next to the "Lives:" label.
+
+On life loss, player respawns at (100, 338) with reset velocity, standing on the ground at y=370 (no platform there).
 
 ### Sound System ([sound_manager.py](sound_manager.py))
 
@@ -537,22 +575,62 @@ class SoundManager:
 
 All sounds use exponential decay envelopes for authentic retro feel.
 
+### Leaderboard System ([leaderboard.py](leaderboard.py))
+
+**Persistent high score tracking** using JSON file storage:
+
+```python
+class Leaderboard:
+    def add_score(self, player_name, score, level):
+        """Add a new score to the leaderboard"""
+        entry = {
+            'name': player_name,
+            'score': score,
+            'level': level,
+            'date': datetime.now().strftime('%Y-%m-%d %H:%M')
+        }
+        self.scores.append(entry)
+        # Sort by score (descending), then by level (descending)
+        self.scores.sort(key=lambda x: (x['score'], x['level']), reverse=True)
+        # Keep only top 10
+        self.scores = self.scores[:10]
+```
+
+**Features**:
+- Stores top 10 scores in `leaderboard.json`
+- Tracks player name, score, level reached, and timestamp
+- Remembers last player name for quick re-entry
+- Automatically saves scores when game ends
+- Displays leaderboard with current player's score highlighted in red
+
+**Name Entry System**:
+- Shows name entry screen before game starts
+- Pre-fills with last player's name as default
+- Supports typing, backspace, and escape to load previous name
+- 20 character limit for names
+- Defaults to "Anonymous" if left blank
+
 ### Game States
 
 The game manages multiple states:
 
-1. **Playing**: Normal gameplay
-2. **Level Transition**: Shows "LEVEL X" screen for 3 seconds
-3. **Game Over**: Shows when lives <= 0, player can press R to restart
+1. **Name Entry**: Initial screen where player enters their name
+2. **Playing**: Normal gameplay
+3. **Level Transition**: Shows "LEVEL X" screen for 3 seconds
+4. **Game Over**: Shows when lives <= 0, displays leaderboard
+5. **Leaderboard View**: Overlay showing top 10 scores (toggleable with L key)
 
-### Rendering ([jumping_jack.py:113-158](jumping_jack.py#L113-L158))
+### Rendering ([jumping_jack.py:290-336](jumping_jack.py#L290-L336))
 
 Draw order (back to front):
 1. White background
 2. Platforms (red rectangles with gaps)
-3. Enemies (colored ellipses with eyes)
-4. Player (blue rectangle with eyes)
-5. UI text (score, lives, level)
+3. Enemies (colored sprites with unique designs)
+4. Player (Jack stick figure sprite)
+5. UI elements:
+   - Score text (top left)
+   - Lives label and Jack sprite icons (below score)
+   - Level text (top right)
 6. Overlays (level transition, game over)
 
 ### Technical Challenges Solved
@@ -594,20 +672,23 @@ This design choice makes gap collision detection consistent regardless of initia
 
 ### Code Statistics
 
-- **Total files**: 5 Python modules
-- **Total classes**: 4 (Game, Player, Platform, Enemy)
-- **Lines of code**: ~400
-- **Dependencies**: pygame (only external dependency)
-- **Platform spacing**: 80 pixels uniform vertical spacing
-- **Jump calibration**: Jump strength -15, gravity 0.8, tuned for single-floor jumps
+- **Total files**: 7 Python modules
+- **Total classes**: 13 (Game, Player, Platform, BaseEnemy + 9 enemy types, SoundManager, Leaderboard)
+- **Lines of code**: ~900+
+- **Dependencies**: pygame, numpy (for sound synthesis)
+- **Platform spacing**: 60 pixels uniform vertical spacing
+- **Jump calibration**: Jump strength -11, gravity 0.8, tuned for single-floor jumps
+- **Data persistence**: leaderboard.json for high scores
 
 ### Future Enhancement Ideas
 
 - Power-ups (invincibility, slow-motion)
 - Different platform patterns per level
 - ~~Sound effects~~ ✓ **DONE** - Retro-style synthesized sounds added!
+- ~~High score persistence~~ ✓ **DONE** - Leaderboard with player names added!
 - Background music
-- High score persistence
+- Online leaderboard sync
 - Multiple player characters
 - Boss levels
 - More detailed sprite animations
+- Achievement system

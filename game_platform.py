@@ -80,7 +80,7 @@ class Platform:
         else:
             return True
 
-    def draw(self, screen, all_platforms):
+    def draw(self, screen, all_platforms, debug_mode=False):
         # Find which gap (if any) should be displayed on this platform's level
         active_gap = None
         for platform in all_platforms:
@@ -106,12 +106,13 @@ class Platform:
                 pygame.draw.rect(screen, RED, (0, self.y, gap_actual_start, self.height))
                 pygame.draw.rect(screen, RED, (gap_actual_end, self.y, self.width - gap_actual_end, self.height))
 
-            # Debug: Draw gap number for the active gap on this platform level
-            font = pygame.font.Font(None, 24)
-            gap_text = font.render(str(active_gap.original_platform_index), True, BLUE)
-            # Position the number in the middle of the gap
-            gap_center = (gap_actual_start + active_gap.gap_width / 2) % self.width
-            screen.blit(gap_text, (gap_center - 6, self.y - 2))
+            # Draw gap number only in debug mode
+            if debug_mode:
+                font = pygame.font.Font(None, 24)
+                gap_text = font.render(str(active_gap.original_platform_index), True, BLUE)
+                # Position the number in the middle of the gap
+                gap_center = (gap_actual_start + active_gap.gap_width / 2) % self.width
+                screen.blit(gap_text, (gap_center - 6, self.y - 2))
         else:
             # No gap on this platform level - draw solid platform
             pygame.draw.rect(screen, RED, (0, self.y, self.width, self.height))

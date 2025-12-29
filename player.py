@@ -11,7 +11,7 @@ class Player:
         self.velocity_y = 0
         self.jumping = False
         self.gravity = 0.8
-        self.jump_strength = -14  # Tuned to jump exactly one floor (60 pixels)
+        self.jump_strength = -11  # Tuned to jump exactly one floor (60 pixels)
         self.move_speed = 5
         self.animation_frame = 0  # For running animation
         self.last_direction = 0  # Track movement direction: 0=still, -1=left, 1=right
@@ -158,6 +158,32 @@ class Player:
             return True
 
         return False
+
+    @staticmethod
+    def draw_small_jack(screen, x, y):
+        """Draw a small Jack sprite at the given position (for lives display)"""
+        # Scale factor for smaller sprite (increased from 0.5 to 0.7 for better visibility)
+        scale = 0.7
+        cx = int(x)
+
+        # Head
+        head_y = int(y + 3 * scale)
+        pygame.draw.circle(screen, BLACK, (cx, head_y), int(3 * scale))
+
+        # Body
+        body_top = head_y + int(3 * scale)
+        body_bottom = int(y + 13 * scale)
+        pygame.draw.line(screen, BLACK, (cx, body_top), (cx, body_bottom), 2)
+
+        # Arms (standing position)
+        arm_y = int(y + 7 * scale)
+        pygame.draw.line(screen, BLACK, (cx, arm_y), (cx - int(3 * scale), arm_y + int(4 * scale)), 2)
+        pygame.draw.line(screen, BLACK, (cx, arm_y), (cx + int(3 * scale), arm_y + int(4 * scale)), 2)
+
+        # Legs (standing position)
+        legs_y = body_bottom
+        pygame.draw.line(screen, BLACK, (cx, legs_y), (cx - int(2 * scale), int(y + 16 * scale)), 2)
+        pygame.draw.line(screen, BLACK, (cx, legs_y), (cx + int(2 * scale), int(y + 16 * scale)), 2)
 
     def draw(self, screen):
         # Draw Jumping Jack character similar to original ZX Spectrum

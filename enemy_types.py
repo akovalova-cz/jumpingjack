@@ -249,21 +249,21 @@ class Train(BaseEnemy):
         # Main body
         pygame.draw.rect(screen, self.color, (self.x + 10, cy - 6, self.width - 20, 12))
 
-        # Cabin and smokestack should be at the FRONT (direction of movement)
-        if self.direction == 1:  # Moving right - cabin at right
-            # Cabin at front (right)
-            pygame.draw.rect(screen, self.color, (self.x + self.width - 15, cy - 10, 10, 10))
-            # Smokestack at front
-            pygame.draw.rect(screen, self.color, (self.x + self.width - 20, cy - 14, 4, 8))
-            # Window on cabin
-            pygame.draw.circle(screen, BLACK, (int(self.x + self.width - 10), cy - 5), 2)
-        else:  # Moving left - cabin at left
-            # Cabin at front (left)
+        # Cabin and smokestack should be at the BACK (opposite of movement direction)
+        if self.direction == 1:  # Moving right - cabin at left (back)
+            # Cabin at back (left)
             pygame.draw.rect(screen, self.color, (self.x + 5, cy - 10, 10, 10))
-            # Smokestack at front
+            # Smokestack at back
             pygame.draw.rect(screen, self.color, (self.x + 16, cy - 14, 4, 8))
             # Window on cabin
             pygame.draw.circle(screen, BLACK, (int(self.x + 10), cy - 5), 2)
+        else:  # Moving left - cabin at right (back)
+            # Cabin at back (right)
+            pygame.draw.rect(screen, self.color, (self.x + self.width - 15, cy - 10, 10, 10))
+            # Smokestack at back
+            pygame.draw.rect(screen, self.color, (self.x + self.width - 20, cy - 14, 4, 8))
+            # Window on cabin
+            pygame.draw.circle(screen, BLACK, (int(self.x + self.width - 10), cy - 5), 2)
 
         # Wheels (4 wheels)
         wheel_y = int(self.y + self.height - 3)
