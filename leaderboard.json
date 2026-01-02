@@ -8,9 +8,21 @@
     },
     {
       "name": "Nastja",
+      "score": 1310,
+      "level": 6,
+      "date": "2026-01-02 20:27"
+    },
+    {
+      "name": "Nastja",
       "score": 1440,
       "level": 4,
       "date": "2025-12-29 21:34"
+    },
+    {
+      "name": "Nastja",
+      "score": 1200,
+      "level": 4,
+      "date": "2026-01-02 20:47"
     },
     {
       "name": "Mike",
@@ -19,10 +31,10 @@
       "date": "2026-01-02 20:11"
     },
     {
-      "name": "Nastja",
-      "score": 1310,
-      "level": 6,
-      "date": "2026-01-02 20:27"
+      "name": "Mike",
+      "score": 720,
+      "level": 2,
+      "date": "2026-01-02 20:16"
     },
     {
       "name": "Mike",
@@ -31,10 +43,10 @@
       "date": "2026-01-02 20:13"
     },
     {
-      "name": "Mike",
-      "score": 720,
-      "level": 2,
-      "date": "2026-01-02 20:16"
+      "name": "Nastja",
+      "score": 30,
+      "level": 1,
+      "date": "2026-01-02 20:50"
     },
     {
       "name": "Nastja",

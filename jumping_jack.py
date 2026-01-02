@@ -65,10 +65,49 @@ class Game:
         # if they move there from different directions
         # Each gap gets a unique ID (0, 1, 2, ...) to track its movement in debug mode
         for gap_index in range(num_gaps):
-            # Each gap starts on a random platform
-            platform_index = random.randint(0, len(self.platform_positions) - 1)
-            y = self.platform_positions[platform_index]
-            self.platforms.append(Platform(y, self.base_speed, platform_index, self.platform_positions, gap_id=gap_index))
+            # Try to find a non-overlapping position for this gap
+            max_attempts = 20
+            gap_created = False
+
+            for attempt in range(max_attempts):
+                # Each gap starts on a random platform
+                platform_index = random.randint(0, len(self.platform_positions) - 1)
+                y = self.platform_positions[platform_index]
+
+                # Create temporary gap to check position
+                temp_gap = Platform(y, self.base_speed, platform_index, self.platform_positions, gap_id=gap_index)
+
+                # Check if this gap overlaps with any existing gap on the same platform
+                overlaps = False
+                min_gap_distance = 100  # Minimum pixels between gaps on same platform
+
+                for existing_gap in self.platforms:
+                    # Only check gaps that are currently on the same platform
+                    if existing_gap.gap_current_platform_index == platform_index:
+                        # Calculate the distance between gap centers
+                        existing_gap_center = existing_gap.gap_start + existing_gap.gap_width / 2
+                        temp_gap_center = temp_gap.gap_start + temp_gap.gap_width / 2
+
+                        # Account for screen wrapping
+                        distance = abs(existing_gap_center - temp_gap_center)
+                        wrapped_distance = SCREEN_WIDTH - distance
+                        actual_distance = min(distance, wrapped_distance)
+
+                        # Check if gaps are too close
+                        if actual_distance < min_gap_distance:
+                            overlaps = True
+                            break
+
+                if not overlaps:
+                    self.platforms.append(temp_gap)
+                    gap_created = True
+                    break
+
+            # If we couldn't find a non-overlapping position after max attempts, add it anyway
+            if not gap_created:
+                platform_index = random.randint(0, len(self.platform_positions) - 1)
+                y = self.platform_positions[platform_index]
+                self.platforms.append(Platform(y, self.base_speed, platform_index, self.platform_positions, gap_id=gap_index))
 
         # Progressive enemy spawning: X initial enemies, Y added during level
         # Level 1: 2 initial, 1 added | Level 2: 3 initial, 2 added | etc.
@@ -542,9 +581,9 @@ class Game:
             self.screen.blit(text, (50, y_pos))
             y_pos += 35
 
-        # Instructions
+        # Instructions - positioned lower to avoid overlapping with 6th entry
         instruction = font_small.render("Press R to Restart  |  Press L to close", True, BLACK)
-        instruction_rect = instruction.get_rect(center=(SCREEN_WIDTH/2, SCREEN_HEIGHT - 40))
+        instruction_rect = instruction.get_rect(center=(SCREEN_WIDTH/2, SCREEN_HEIGHT - 20))
         self.screen.blit(instruction, instruction_rect)
 
     def run(self):
