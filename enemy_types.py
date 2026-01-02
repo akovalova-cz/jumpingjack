@@ -180,7 +180,8 @@ class Octopus(BaseEnemy):
 
         num_tentacles = 4
         for i in range(num_tentacles):
-            tentacle_x = int(self.x + 8 + i * 6)
+            # Distribute tentacles closer to the body center
+            tentacle_x = int(self.x + self.width * 0.3 + i * (self.width * 0.4 / (num_tentacles - 1)))
             wave_offset = int(3 * pygame.math.Vector2(1, 0).rotate((self.animation_frame * 3 + i * 45) % 360).y)
             pygame.draw.line(screen, self.color,
                            (tentacle_x, self.y + 16),
@@ -192,7 +193,7 @@ class Ghost(BaseEnemy):
         super().__init__(platform_positions, speed, start_platform_index, color_variant)
         self.width = 28
         self.height = 28
-        colors = [(0, 255, 255), (255, 140, 0), (255, 105, 180), (173, 216, 230), GREEN, PURPLE]  # Cyan (first), then others
+        colors = [(0, 255, 255), (255, 140, 0), (255, 105, 180), (173, 216, 230), GREEN, BLACK]  # Cyan (first), then others including black
         self.color = colors[color_variant % len(colors)]
 
     def draw(self, screen):
@@ -294,11 +295,11 @@ class Hunter(BaseEnemy):
         if self.direction == 1:
             pygame.draw.line(screen, self.color, (cx, arm_y), (cx - 6, arm_y + 4), 2)
             pygame.draw.line(screen, self.color, (cx, arm_y), (cx + 8, arm_y), 2)
-            pygame.draw.rect(screen, BLACK, (cx + 8, arm_y - 1, 5, 2))
+            pygame.draw.rect(screen, BLACK, (cx + 8, arm_y - 2, 8, 3))
         else:
             pygame.draw.line(screen, self.color, (cx, arm_y), (cx - 8, arm_y), 2)
             pygame.draw.line(screen, self.color, (cx, arm_y), (cx + 6, arm_y + 4), 2)
-            pygame.draw.rect(screen, BLACK, (cx - 13, arm_y - 1, 5, 2))
+            pygame.draw.rect(screen, BLACK, (cx - 16, arm_y - 2, 8, 3))
 
         legs_y = body_bottom
         if (self.animation_frame // 4) % 2 == 0:
@@ -321,32 +322,45 @@ class Dinosaur(BaseEnemy):
         cx = int(self.x + self.width / 2)
         cy = int(self.y + self.height / 2)
 
-        pygame.draw.ellipse(screen, self.color, (self.x + 8, cy - 8, self.width - 16, 16))
+        # Body - larger and positioned lower for T-Rex stance
+        pygame.draw.ellipse(screen, self.color, (self.x + 8, cy - 4, self.width - 16, 18))
 
+        # Head - bigger and positioned at same level as body (not above)
         if self.direction == 1:
-            head_x = int(self.x + self.width - 8)
+            head_x = int(self.x + self.width - 6)
         else:
-            head_x = int(self.x + 8)
+            head_x = int(self.x + 6)
 
-        pygame.draw.circle(screen, self.color, (head_x, cy - 6), 7)
-        pygame.draw.circle(screen, BLACK, (head_x, cy - 8), 2)
+        # Bigger head for T-Rex
+        pygame.draw.ellipse(screen, self.color, (head_x - 8, cy - 8, 16, 14))
 
+        # Eye positioned higher
+        pygame.draw.circle(screen, BLACK, (head_x, cy - 6), 2)
+
+        # Jaw/mouth for T-Rex
+        if self.direction == 1:
+            pygame.draw.line(screen, BLACK, (head_x + 4, cy - 2), (head_x + 6, cy), 2)
+        else:
+            pygame.draw.line(screen, BLACK, (head_x - 4, cy - 2), (head_x - 6, cy), 2)
+
+        # Tail - longer and more substantial
         if self.direction == 1:
             tail_x = int(self.x + 5)
             pygame.draw.polygon(screen, self.color, [
-                (tail_x + 5, cy), (tail_x, cy - 5), (tail_x, cy + 5)])
+                (tail_x + 8, cy), (tail_x, cy - 6), (tail_x, cy + 6)])
         else:
             tail_x = int(self.x + self.width - 5)
             pygame.draw.polygon(screen, self.color, [
-                (tail_x - 5, cy), (tail_x, cy - 5), (tail_x, cy + 5)])
+                (tail_x - 8, cy), (tail_x, cy - 6), (tail_x, cy + 6)])
 
+        # Legs - thicker for T-Rex
         leg_y = int(self.y + self.height)
         if (self.animation_frame // 4) % 2 == 0:
-            pygame.draw.line(screen, self.color, (cx - 4, cy + 6), (cx - 4, leg_y), 2)
-            pygame.draw.line(screen, self.color, (cx + 4, cy + 6), (cx + 4, leg_y), 2)
+            pygame.draw.line(screen, self.color, (cx - 4, cy + 6), (cx - 4, leg_y), 3)
+            pygame.draw.line(screen, self.color, (cx + 4, cy + 6), (cx + 4, leg_y), 3)
         else:
-            pygame.draw.line(screen, self.color, (cx - 2, cy + 6), (cx - 4, leg_y), 2)
-            pygame.draw.line(screen, self.color, (cx + 2, cy + 6), (cx + 4, leg_y), 2)
+            pygame.draw.line(screen, self.color, (cx - 2, cy + 6), (cx - 4, leg_y), 3)
+            pygame.draw.line(screen, self.color, (cx + 2, cy + 6), (cx + 4, leg_y), 3)
 
 
 # Factory function to create enemies

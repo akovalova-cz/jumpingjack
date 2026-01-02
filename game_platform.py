@@ -1,10 +1,10 @@
 import pygame
 import random
-from constants import SCREEN_WIDTH, RED, BLUE
+from constants import SCREEN_WIDTH, RED, BLUE, WHITE
 
 
 class Platform:
-    def __init__(self, y, speed, platform_index, all_platform_ys):
+    def __init__(self, y, speed, platform_index, all_platform_ys, gap_id=0):
         self.y = y
         self.original_y = y
         self.height = 3  # Thinner platforms like the original
@@ -12,6 +12,7 @@ class Platform:
         self.width = SCREEN_WIDTH
         self.original_platform_index = platform_index
         self.all_platform_ys = all_platform_ys
+        self.gap_id = gap_id  # Unique ID for this gap to track its movement
 
         self.gap_start = random.randint(50, SCREEN_WIDTH - 100)
         self.gap_width = random.randint(60, 90)
@@ -81,38 +82,49 @@ class Platform:
             return True
 
     def draw(self, screen, all_platforms, debug_mode=False):
-        # Find which gap (if any) should be displayed on this platform's level
-        active_gap = None
+        # Find ALL gaps that should be displayed on this platform's level
+        active_gaps = []
         for platform in all_platforms:
             if platform.gap_current_platform_index == self.original_platform_index:
-                active_gap = platform
-                break
+                active_gaps.append(platform)
 
-        if active_gap:
-            # Draw this platform with the active gap
-            gap_actual_start = active_gap.gap_start + active_gap.x_offset
-            gap_actual_end = gap_actual_start + active_gap.gap_width
+        if active_gaps:
+            # Create a list to track all gap regions (to draw platform around them)
+            gap_regions = []
 
-            while gap_actual_start < 0:
-                gap_actual_start += self.width
-                gap_actual_end += self.width
+            for active_gap in active_gaps:
+                gap_actual_start = active_gap.gap_start + active_gap.x_offset
+                gap_actual_end = gap_actual_start + active_gap.gap_width
 
-            gap_actual_start = gap_actual_start % self.width
-            gap_actual_end = gap_actual_end % self.width
+                while gap_actual_start < 0:
+                    gap_actual_start += self.width
+                    gap_actual_end += self.width
 
-            if gap_actual_end < gap_actual_start:
-                pygame.draw.rect(screen, RED, (gap_actual_end, self.y, gap_actual_start - gap_actual_end, self.height))
-            else:
-                pygame.draw.rect(screen, RED, (0, self.y, gap_actual_start, self.height))
-                pygame.draw.rect(screen, RED, (gap_actual_end, self.y, self.width - gap_actual_end, self.height))
+                gap_actual_start = gap_actual_start % self.width
+                gap_actual_end = gap_actual_end % self.width
 
-            # Draw gap number only in debug mode
-            if debug_mode:
-                font = pygame.font.Font(None, 24)
-                gap_text = font.render(str(active_gap.original_platform_index), True, BLUE)
-                # Position the number in the middle of the gap
-                gap_center = (gap_actual_start + active_gap.gap_width / 2) % self.width
-                screen.blit(gap_text, (gap_center - 6, self.y - 2))
+                gap_regions.append((gap_actual_start, gap_actual_end, active_gap))
+
+            # Draw solid platform first
+            pygame.draw.rect(screen, RED, (0, self.y, self.width, self.height))
+
+            # Then "cut out" gaps by drawing black rectangles over them
+            for gap_start, gap_end, active_gap in gap_regions:
+                if gap_end < gap_start:
+                    # Gap wraps around screen edge - cut out left and right sections
+                    pygame.draw.rect(screen, WHITE, (gap_start, self.y, self.width - gap_start, self.height))
+                    pygame.draw.rect(screen, WHITE, (0, self.y, gap_end, self.height))
+                else:
+                    # Gap doesn't wrap - cut out middle section
+                    pygame.draw.rect(screen, WHITE, (gap_start, self.y, gap_end - gap_start, self.height))
+
+                # Draw gap ID only in debug mode (to track gap movement)
+                if debug_mode:
+                    font = pygame.font.Font(None, 24)
+                    gap_text = font.render(str(active_gap.gap_id), True, BLUE)
+                    # Position the number in the middle of the gap
+                    gap_center = (gap_start + active_gap.gap_width / 2) % self.width
+                    screen.blit(gap_text, (gap_center - 6, self.y - 2))
         else:
             # No gap on this platform level - draw solid platform
             pygame.draw.rect(screen, RED, (0, self.y, self.width, self.height))

@@ -66,16 +66,22 @@ In debug mode, each gap will show its origin platform number (0-4) in blue text 
 
 ### Platforms
 - 5 elevated platforms (no ground platform - player stands on empty ground)
-- Platform positions: [510, 430, 350, 270, 190] - evenly spaced 80 pixels apart
+- Platform positions: [340, 280, 220, 160, 100] - evenly spaced 60 pixels apart
+- **Progressive gap difficulty**: Number of gaps increases with each level
+  - Level 1: 6 gaps
+  - Level 2: 7 gaps
+  - Level 3: 8 gaps
+  - And so on... (formula: 5 + level number)
 - Each gap follows a snake/zigzag pattern:
   - Travels completely across one platform line until fully off-screen
   - Appears on the next platform from the same edge, moving in opposite direction
   - Example: left-to-right on platform 0 → right-to-left on platform 1 → left-to-right on platform 2
   - Initial direction and starting platform are random
+- **Multiple gaps can meet on the same platform level** when coming from different directions
 - Gaps bounce between top and bottom platforms
 - **CRITICAL: You can ONLY jump through gaps** - hitting a solid platform from below immediately stops your jump
 - Jumping through solid platform lines is NOT possible - the player will be blocked
-- **Jump height is limited to exactly one platform level (80 pixels)** - you cannot jump through multiple platforms in a single jump, even if gaps are aligned
+- **Jump height is limited to exactly one platform level (60 pixels)** - you cannot jump through multiple platforms in a single jump, even if gaps are aligned
 - You can land on solid parts of platforms
 
 ### Enemies
@@ -107,12 +113,12 @@ Each enemy type has 6 color variants. The first color listed is the default (app
 1. **Snake** (green/yellow/blue/orange/spring green/light blue) - Wavy animated body with segments
 2. **Plane** (red/purple/orange/deep sky blue/deep pink/gold) - Side-view aircraft with wings and tail
 3. **Axel** (gold/green/orange/deep pink/cyan/red) - Spinning wheel with rotating spokes
-4. **Octopus** (deep pink/green/red/orange/deep sky blue/purple) - Alien with waving tentacles
-5. **Ghost** (cyan/orange/hot pink/light blue/green/purple) - Floating specter with wavy bottom edge
+4. **Octopus** (deep pink/green/red/orange/deep sky blue/purple) - Alien with waving tentacles attached to body
+5. **Ghost** (cyan/orange/hot pink/light blue/green/black) - Floating specter with wavy bottom edge
 6. **Car** (yellow/deep sky blue/orange/spring green/deep pink/red) - Automobile with windows and wheels
 7. **Train** (blue violet/green/orange/deep sky blue/gold/red) - Locomotive with cabin and smokestack at the back, pulling forward
-8. **Hunter** (orange/green/blue violet/deep sky blue/deep pink/red) - Stick figure carrying a gun
-9. **Dinosaur** (deep sky blue/purple/orange/indian red/gold/green) - T-Rex with animated walking legs
+8. **Hunter** (orange/green/blue violet/deep sky blue/deep pink/red) - Stick figure carrying a larger gun
+9. **Dinosaur** (deep sky blue/purple/orange/indian red/gold/green) - T-Rex with bigger head, jaw, and thicker legs
 
 ### Sound Effects
 - **Retro-style synthesized sounds** generated programmatically
@@ -155,11 +161,17 @@ Each enemy type has 6 color variants. The first color listed is the default (app
 ### Difficulty Progression
 - Each level increases:
   - Platform scrolling speed
+  - Number of gaps (starts at 6, increases by 1 per level)
   - Initial enemy count (X)
   - Enemies spawned during level (Y)
+- **Progressive gap difficulty**:
+  - Level 1: 6 gaps, speed 1.5
+  - Level 2: 7 gaps, speed 2.0
+  - Level 3: 8 gaps, speed 2.5
+  - And so on...
 - **Progressive enemy spawning**:
-  - Level 1: 2 initial enemies, 1 spawns during play, speed 1.5
-  - Level 2: 3 initial enemies, 2 spawn during play, speed 2.0
+  - Level 1: 2 initial enemies, 1 spawns during play
+  - Level 2: 3 initial enemies, 2 spawn during play
   - Level 3: 4 initial enemies, 3 spawn during play, speed 2.5
   - Level 4: 5 initial enemies, 4 spawn during play, speed 3.0
   - Level 5+: 6 initial enemies (max), 4 spawn during play (max)
@@ -171,7 +183,9 @@ Each enemy type has 6 color variants. The first color listed is the default (app
 
 - Screen-wrapping movement for player
 - Dynamic platform gaps with bidirectional scrolling
+- **Progressive gap system** - more gaps added each level for increasing difficulty
 - Platform gaps that jump between levels like enemies
+- Multiple gaps can appear on same platform level simultaneously
 - Multi-platform enemy patrol system
 - Progressive difficulty scaling
 - Level-based progression system
@@ -270,9 +284,19 @@ def can_land_on_platform(self, platform, all_platforms):
 
 ### Platform System ([game_platform.py](game_platform.py))
 
+#### Progressive Gap System
+
+The game creates multiple gap objects that increase with each level:
+- **Level 1**: 6 gaps (5 + 1)
+- **Level 2**: 7 gaps (5 + 2)
+- **Level 3**: 8 gaps (5 + 3)
+- Formula: `num_gaps = 5 + level`
+
+Gaps are distributed across the 5 platform levels, allowing multiple gaps to appear on the same level simultaneously. The rendering system handles this by searching through all gaps to find which one(s) should be displayed on each platform level.
+
 #### Dynamic Gap Movement
 
-Each platform has a gap that scrolls independently. The update logic ensures gaps travel completely across one platform line before moving to the next:
+Each gap scrolls independently. The update logic ensures gaps travel completely across one platform line before moving to the next:
 
 ```python
 def update(self):
@@ -431,12 +455,12 @@ def update(self):
   1. **Snake** (green/yellow/blue/orange/spring green/light blue) - 35x20px, wavy animated body
   2. **Plane** (red/purple/orange/deep sky blue/deep pink/gold) - 50x20px, largest enemy with wings and tail
   3. **Axel** (gold/green/orange/deep pink/cyan/red) - 25x25px, spinning wheel with rotating spokes
-  4. **Octopus** (deep pink/green/red/orange/deep sky blue/purple) - 30x25px, alien with waving tentacles
-  5. **Ghost** (cyan/orange/hot pink/light blue/green/purple) - 28x28px, floating with wavy bottom (Level 2+)
+  4. **Octopus** (deep pink/green/red/orange/deep sky blue/purple) - 30x25px, alien with tentacles attached to body
+  5. **Ghost** (cyan/orange/hot pink/light blue/green/black) - 28x28px, floating with wavy bottom (Level 2+)
   6. **Car** (yellow/deep sky blue/orange/spring green/deep pink/red) - 45x18px, automobile with wheels (Level 3+)
   7. **Train** (blue violet/green/orange/deep sky blue/gold/red) - 55x22px, locomotive with cabin at back (Level 4+)
-  8. **Hunter** (orange/green/blue violet/deep sky blue/deep pink/red) - 22x30px, stick figure with gun (Level 5+)
-  9. **Dinosaur** (deep sky blue/purple/orange/indian red/gold/green) - 40x28px, T-Rex with animated legs (Level 6+)
+  8. **Hunter** (orange/green/blue violet/deep sky blue/deep pink/red) - 22x30px, stick figure with larger gun (Level 5+)
+  9. **Dinosaur** (deep sky blue/purple/orange/indian red/gold/green) - 40x28px, T-Rex with bigger head, jaw, thicker legs (Level 6+)
 - Each type has unique size, color variants, visual appearance, and animations
 - Train is the longest enemy (55x22 pixels), Plane is widest (50x20)
 - All follow same snake/zigzag movement pattern

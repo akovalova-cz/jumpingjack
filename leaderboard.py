@@ -49,10 +49,9 @@ class Leaderboard:
         }
 
         self.scores.append(entry)
-        # Sort by score (descending), then by level (descending)
-        self.scores.sort(key=lambda x: (x['score'], x['level']), reverse=True)
-        # Keep only top 10
-        self.scores = self.scores[:10]
+        # Sort by level first (descending), then by score (descending)
+        self.scores.sort(key=lambda x: (x['level'], x['score']), reverse=True)
+        # Keep all scores in the file (no limit)
         self.save()
 
     def get_top_scores(self, limit=10):

@@ -2,7 +2,7 @@ import pygame
 import random
 import sys
 
-from constants import SCREEN_WIDTH, SCREEN_HEIGHT, FPS, WHITE, BLACK, RED
+from constants import SCREEN_WIDTH, SCREEN_HEIGHT, FPS, WHITE, BLACK, RED, BLUE
 from player import Player
 from game_platform import Platform
 from enemy_types import create_enemy
@@ -48,15 +48,27 @@ class Game:
         self.player = Player(self.sound_manager)
         self.platforms = []
         self.enemies = []
-        self.base_speed = 1.5 + (self.level - 1) * 0.5
+        # More gradual speed increase: +0.2 per level
+        # Level 1: 1.2, Level 2: 1.4, Level 3: 1.6, Level 6: 2.2, Level 10: 3.0
+        self.base_speed = 1.2 + (self.level - 1) * 0.2
         self.invincibility_timer = FPS * 2  # 2 seconds of invincibility at start
 
         # 5 elevated platforms - closer together like the original
         # Player stands on ground at y=370 (no platform there)
         # First platform at y=340 (30 pixels above ground), then upward every 60 pixels
         self.platform_positions = [340, 280, 220, 160, 100]
-        for i, y in enumerate(self.platform_positions):
-            self.platforms.append(Platform(y, self.base_speed, i, self.platform_positions))
+
+        # Number of gaps increases with level: Level 1 = 6 gaps, Level 2 = 7 gaps, etc.
+        num_gaps = 5 + self.level
+
+        # Create gaps with random starting platforms - gaps may naturally meet on same platform
+        # if they move there from different directions
+        # Each gap gets a unique ID (0, 1, 2, ...) to track its movement in debug mode
+        for gap_index in range(num_gaps):
+            # Each gap starts on a random platform
+            platform_index = random.randint(0, len(self.platform_positions) - 1)
+            y = self.platform_positions[platform_index]
+            self.platforms.append(Platform(y, self.base_speed, platform_index, self.platform_positions, gap_id=gap_index))
 
         # Progressive enemy spawning: X initial enemies, Y added during level
         # Level 1: 2 initial, 1 added | Level 2: 3 initial, 2 added | etc.
@@ -270,7 +282,7 @@ class Game:
         for enemy in self.enemies:
             enemy.update()
 
-        self.player.update(self.platforms)
+        self.player.update(self.platforms, self.platform_positions)
 
         if self.player.y <= 0:
             self.level += 1
@@ -350,8 +362,51 @@ class Game:
         else:
             self.screen.fill(WHITE)
 
-            for platform in self.platforms:
-                platform.draw(self.screen, self.platforms, self.debug_mode)
+            # Draw each of the 5 physical platform bars
+            # For each platform level, find ALL gaps currently on it and render them
+            for platform_index in range(len(self.platform_positions)):
+                y = self.platform_positions[platform_index]
+
+                # Find ALL gaps currently on this platform level
+                active_gaps = []
+                for gap in self.platforms:
+                    if gap.gap_current_platform_index == platform_index:
+                        active_gaps.append(gap)
+
+                if active_gaps:
+                    # Draw platform with gaps
+                    # Draw solid platform first
+                    pygame.draw.rect(self.screen, RED, (0, y, SCREEN_WIDTH, 3))
+
+                    # Then cut out the gaps
+                    for active_gap in active_gaps:
+                        gap_actual_start = active_gap.gap_start + active_gap.x_offset
+                        gap_actual_end = gap_actual_start + active_gap.gap_width
+
+                        while gap_actual_start < 0:
+                            gap_actual_start += SCREEN_WIDTH
+                            gap_actual_end += SCREEN_WIDTH
+
+                        gap_actual_start = gap_actual_start % SCREEN_WIDTH
+                        gap_actual_end = gap_actual_end % SCREEN_WIDTH
+
+                        if gap_actual_end < gap_actual_start:
+                            # Gap wraps around screen edge
+                            pygame.draw.rect(self.screen, WHITE, (gap_actual_start, y, SCREEN_WIDTH - gap_actual_start, 3))
+                            pygame.draw.rect(self.screen, WHITE, (0, y, gap_actual_end, 3))
+                        else:
+                            # Gap doesn't wrap
+                            pygame.draw.rect(self.screen, WHITE, (gap_actual_start, y, gap_actual_end - gap_actual_start, 3))
+
+                        # Draw gap ID in debug mode
+                        if self.debug_mode:
+                            font = pygame.font.Font(None, 24)
+                            gap_text = font.render(str(active_gap.gap_id), True, BLUE)
+                            gap_center = (gap_actual_start + active_gap.gap_width / 2) % SCREEN_WIDTH
+                            self.screen.blit(gap_text, (gap_center - 6, y - 2))
+                else:
+                    # No gaps on this platform level - draw solid platform
+                    pygame.draw.rect(self.screen, RED, (0, y, SCREEN_WIDTH, 3))
 
             for enemy in self.enemies:
                 enemy.draw(self.screen)
@@ -468,9 +523,9 @@ class Game:
         # Draw line under header
         pygame.draw.line(self.screen, BLACK, (50, y_pos + 35), (SCREEN_WIDTH - 50, y_pos + 35), 2)
 
-        # Entries
+        # Entries - show only top 6
         y_pos = 170
-        scores = self.leaderboard.get_top_scores(10)
+        scores = self.leaderboard.get_top_scores(6)
 
         for i, entry in enumerate(scores):
             rank = f"{i + 1}."

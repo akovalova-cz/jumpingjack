@@ -45,27 +45,31 @@ class Player:
         if not self.jumping and self.sound_manager:
             self.sound_manager.play_walk()
 
-    def update(self, platforms):
+    def update(self, gap_objects, platform_positions):
         # Track if we were jumping at start of frame
         was_jumping_before = self.jumping
 
         self.velocity_y += self.gravity
 
+        # Check head collision against all 5 physical platform levels
         if self.velocity_y < 0:
-            for platform in platforms:
-                if self.check_head_collision(platform, platforms):
-                    self.y = platform.y + platform.height
+            for platform_index, platform_y in enumerate(platform_positions):
+                if self.check_head_collision_at_level(platform_index, platform_y, gap_objects):
+                    self.y = platform_y + 3  # platform height is 3
                     self.velocity_y = 0
+                    if self.sound_manager:
+                        self.sound_manager.play('land')
                     break
 
         self.y += self.velocity_y
 
         landed = False
 
+        # Check landing on all 5 physical platform levels
         if self.velocity_y >= 0:
-            for platform in platforms:
-                if self.can_land_on_platform(platform, platforms):
-                    self.y = platform.y - self.height
+            for platform_index, platform_y in enumerate(platform_positions):
+                if self.can_land_on_platform_at_level(platform_index, platform_y, gap_objects):
+                    self.y = platform_y - self.height
                     self.velocity_y = 0
                     self.jumping = False
                     landed = True
@@ -83,78 +87,96 @@ class Player:
 
         return True
 
-    def check_head_collision(self, platform, all_platforms):
+    def check_head_collision_at_level(self, platform_index, platform_y, gap_objects):
+        """Check if player's head hits a solid part of a platform level"""
+        platform_height = 3
         player_top = self.y
         player_next_top = player_top + self.velocity_y
 
-        if player_top >= platform.y + platform.height and player_next_top <= platform.y + platform.height:
+        # Check if player is about to hit this platform from below
+        if player_top >= platform_y + platform_height and player_next_top <= platform_y + platform_height:
             player_center = self.x + self.width / 2
 
-            # Find which gap (if any) is currently on this platform's level
-            active_gap = None
-            for p in all_platforms:
-                if p.gap_current_platform_index == platform.original_platform_index:
-                    active_gap = p
-                    break
+            # Find ALL gaps currently on this platform level
+            active_gaps = []
+            for gap in gap_objects:
+                if gap.gap_current_platform_index == platform_index:
+                    active_gaps.append(gap)
 
-            if active_gap:
-                # There's a gap on this level - check if player is in it
-                gap_actual_start = (active_gap.gap_start + active_gap.x_offset) % active_gap.width
-                gap_actual_end = gap_actual_start + active_gap.gap_width
+            if active_gaps:
+                # There are gap(s) on this level - check if player is in ANY of them
+                in_any_gap = False
+                for active_gap in active_gaps:
+                    gap_actual_start = (active_gap.gap_start + active_gap.x_offset) % active_gap.width
+                    gap_actual_end = gap_actual_start + active_gap.gap_width
 
-                if gap_actual_end > active_gap.width:
-                    in_gap = (player_center >= gap_actual_start or
-                             player_center <= gap_actual_end - active_gap.width)
-                else:
-                    in_gap = gap_actual_start <= player_center <= gap_actual_end
+                    if gap_actual_end > active_gap.width:
+                        in_gap = (player_center >= gap_actual_start or
+                                 player_center <= gap_actual_end - active_gap.width)
+                    else:
+                        in_gap = gap_actual_start <= player_center <= gap_actual_end
 
-                return not in_gap
+                    if in_gap:
+                        in_any_gap = True
+                        break
+
+                # If in a gap, can pass through; if not in gap, collide with solid platform
+                return not in_any_gap
             else:
-                # No gap on this level - platform is solid
+                # No gap on this level - platform is solid, collision occurs
                 return True
 
         return False
 
-    def can_land_on_platform(self, platform, all_platforms):
+    def can_land_on_platform_at_level(self, platform_index, platform_y, gap_objects):
+        """Check if player can land on a solid part of a platform level"""
         player_bottom = self.y + self.height
 
-        distance_to_platform = abs(player_bottom - platform.y)
+        distance_to_platform = abs(player_bottom - platform_y)
 
         if distance_to_platform <= abs(self.velocity_y) + 5:
             player_center = self.x + self.width / 2
 
-            # Find which gap (if any) is currently on this platform's level
-            active_gap = None
-            for p in all_platforms:
-                if p.gap_current_platform_index == platform.original_platform_index:
-                    active_gap = p
-                    break
+            # Find ALL gaps currently on this platform level
+            active_gaps = []
+            for gap in gap_objects:
+                if gap.gap_current_platform_index == platform_index:
+                    active_gaps.append(gap)
 
-            if active_gap:
-                # There's a gap on this level - check if player is in it
-                gap_actual_start = (active_gap.gap_start + active_gap.x_offset) % active_gap.width
-                gap_actual_end = gap_actual_start + active_gap.gap_width
+            if active_gaps:
+                # There are gap(s) on this level - check if player is in ANY of them
+                in_any_gap = False
+                for active_gap in active_gaps:
+                    gap_actual_start = (active_gap.gap_start + active_gap.x_offset) % active_gap.width
+                    gap_actual_end = gap_actual_start + active_gap.gap_width
 
-                if gap_actual_end > active_gap.width:
-                    in_gap = (player_center >= gap_actual_start or
-                             player_center <= gap_actual_end - active_gap.width)
-                else:
-                    in_gap = gap_actual_start <= player_center <= gap_actual_end
+                    if gap_actual_end > active_gap.width:
+                        in_gap = (player_center >= gap_actual_start or
+                                 player_center <= gap_actual_end - active_gap.width)
+                    else:
+                        in_gap = gap_actual_start <= player_center <= gap_actual_end
 
-                return not in_gap
+                    if in_gap:
+                        in_any_gap = True
+                        break
+
+                # If in gap, fall through; if not in gap, can land
+                return not in_any_gap
             else:
-                # No gap on this level - can land (platform is solid)
+                # No gap on this level - platform is solid, can land
                 return True
 
         return False
 
     def check_crushed(self, platforms):
-        touching_platforms = []
+        # Get unique Y positions of platforms we're touching
+        touching_platform_y_positions = set()
         for platform in platforms:
             if platform.check_collision(self):
-                touching_platforms.append(platform)
+                touching_platform_y_positions.add(platform.y)
 
-        if len(touching_platforms) >= 2:
+        # Crushed only if touching 2+ platforms at different Y positions
+        if len(touching_platform_y_positions) >= 2:
             return True
 
         return False
